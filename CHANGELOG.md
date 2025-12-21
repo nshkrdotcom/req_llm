@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Anthropic web search tool support** for real-time web content access
+  - `web_search` provider option enables Claude to search the web during conversations
+  - Configurable options: `max_uses`, `allowed_domains`, `blocked_domains`, `user_location`
+  - Automatic source citations in responses
+  - Works with all supported Claude models (Sonnet 4.5, Sonnet 4, Haiku 4.5, Haiku 3.5, Opus 4.5, Opus 4.1, Opus 4)
+  - Can be combined with regular function tools
+  - Pricing: $10 per 1,000 searches plus standard token costs
+  - Example: `provider_options: [web_search: %{max_uses: 5, allowed_domains: ["wikipedia.org"]}]`
 - **ReqLLM.ModelHelpers capability helper functions** for type-safe model capability access
   - Centralized helpers like `ReqLLM.ModelHelpers.json_schema?/1`, `ReqLLM.ModelHelpers.tools_strict?/1`
   - Replaces scattered `get_in(model.capabilities, ...)` calls across providers
