@@ -583,6 +583,109 @@ This is the first stable 1.0 release of ReqLLM, marking production readiness wit
 
 <!-- changelog -->
 
+## [v1.3.0](https://github.com/agentjido/req_llm/compare/v1.2.0...v1.3.0) (2026-01-21)
+
+
+
+
+### Features:
+
+* provider: add Zenmux provider and playground (#342) by youfun
+
+* provider: add Zenmux provider and playground by youfun
+
+* Implement reasoning signatures retainment (#344) by ycastorium
+
+* Implement reasoning retention for supported providers by ycastorium
+
+* feedback: add critical evaluation and recommendations for ReAct Agent implementation by mikehostetler
+
+* Adds support for Bearer tokens to Azure Foundry (#338) by ycastorium
+
+* Adds support for Bearer tokens to Azure Foundry by ycastorium
+
+* provider: add vLLM provider for self-hosted OpenAI-compatible models (#202) by meanderingstream
+
+* Add Azure DeepSeek model support (#254) by shelvick
+
+* Add Azure DeepSeek and MAI-DS model family routing by shelvick
+
+* Add Azure DeepSeek models to supported_models.json by shelvick
+
+* Add Azure AI Foundry endpoint format support by shelvick
+
+* Add Azure OpenAI embedding model support by shelvick
+
+* support file URI for Google image_url content parts (#339) by brent-emb
+
+* add service_tier to openai provider options (#321) by Barna Kovacs
+
+* add configuration and prompt templates for Elixir Mix project phases by mikehostetler
+
+* change to typedstruct #256) by mikehostetler
+
+* extend Context.normalize to handle tool_calls and tool result messages (#313) by mikehostetler
+
+* add StreamResponse.classify/1 and Response.Stream.summarize/1 (#311) by mikehostetler
+
+* Add thinking parameter support for Z.ai providers (#303) by George Guimarães
+
+* openrouter: add support for google/gemini-3-flash-preview (#298) by Itay Adler
+
+### Bug Fixes:
+
+* Correct encrypted? flag in Anthropic reasoning details extraction by mikehostetler
+
+* address PR review feedback by youfun
+
+* Fixed dialyzer issue by ycastorium
+
+* add zai_coding_plan provider support (#347) by mikehostetler
+
+* add zai_coding_plan provider support by mikehostetler
+
+* correct cache token handling for Anthropic API semantics (#316) by shelvick
+
+* Infer reasoning tokens from reasoning_content field by shelvick
+
+* Adds missing reasoning levels (#332) by ycastorium
+
+* Adds missing reasoning levels by ycastorium
+
+* Google Gemini thinking tokens now included in cost calculation (#336) by shelvick
+
+* Google Gemini thinking tokens now included in cost calculation by shelvick
+
+* `thinkingTokenCount` â `thoughtsTokenCount` in gemini.ex by shelvick
+
+* ensure add_reasoning_to_cost flag is preserved from providers by shelvick
+
+* allow hyphenated tool names for MCP server compatibility (#323) by Jon Ator
+
+* allow hyphenated tool names for MCP server compatibility by Jon Ator
+
+* disallow leading/trailing hyphens in tool names by Jon Ator
+
+* revert typedstruct to typed_struct to resolve ecosystem conflicts (#315) by mikehostetler
+
+* Azure provider_options validation and ResponsesAPI finish_reason parsing (#266) by shelvick
+
+* azure: Accept OpenAI-specific provider_options for Azure OpenAI models by shelvick
+
+* openai: Extract finish_reason from correct path in response.incomplete events by shelvick
+
+* Correct cache token extraction and cost calculation (#309) by shelvick
+
+* Allow passing json arrays when using JsonSchema and fix Gemini 3 Json schema calls (#310) by Akash Khan
+
+* Allow using a json array as response schema by Akash Khan
+
+* Allow setting json schema for gemini 3 models by Akash Khan
+
+* Add thinking option to Z.ai provider schema (#304) by George Guimarães
+
+* Always set `responseMimeType` for gemini generate_object requests (#299) by Akash Khan
+
 ## [v1.2.0](https://github.com/agentjido/req_llm/compare/v1.1.0...v1.2.0) (2025-12-23)
 
 
