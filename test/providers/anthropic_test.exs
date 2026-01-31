@@ -1198,4 +1198,130 @@ defmodule ReqLLM.Providers.AnthropicTest do
       assert length(response.message.reasoning_details) == 1
     end
   end
+
+  describe "prepare_request(:object) - schema constraint stripping" do
+    test "strips minimum constraint from pos_integer schema in json_schema mode" do
+      {:ok, schema} =
+        ReqLLM.Schema.compile(
+          count: [type: :pos_integer, required: true, doc: "A positive count"]
+        )
+
+      {:ok, request} =
+        Anthropic.prepare_request(:object, "anthropic:claude-sonnet-4-5-20250929", "Generate",
+          compiled_schema: schema
+        )
+
+      provider_opts = request.options[:provider_options]
+      output_format = Keyword.get(provider_opts, :output_format)
+
+      refute Map.has_key?(output_format.schema["properties"]["count"], "minimum")
+      assert output_format.schema["properties"]["count"]["type"] == "integer"
+    end
+
+    test "strips maximum constraint from integer schema" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "rating" => %{"type" => "integer", "minimum" => 1, "maximum" => 5}
+        }
+      }
+
+      compiled_schema = %{schema: schema}
+
+      {:ok, request} =
+        Anthropic.prepare_request(:object, "anthropic:claude-sonnet-4-5-20250929", "Generate",
+          compiled_schema: compiled_schema
+        )
+
+      provider_opts = request.options[:provider_options]
+      output_format = Keyword.get(provider_opts, :output_format)
+
+      refute Map.has_key?(output_format.schema["properties"]["rating"], "minimum")
+      refute Map.has_key?(output_format.schema["properties"]["rating"], "maximum")
+    end
+
+    test "strips minLength and maxLength from string schema" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "name" => %{"type" => "string", "minLength" => 1, "maxLength" => 100}
+        }
+      }
+
+      compiled_schema = %{schema: schema}
+
+      {:ok, request} =
+        Anthropic.prepare_request(:object, "anthropic:claude-sonnet-4-5-20250929", "Generate",
+          compiled_schema: compiled_schema
+        )
+
+      provider_opts = request.options[:provider_options]
+      output_format = Keyword.get(provider_opts, :output_format)
+
+      refute Map.has_key?(output_format.schema["properties"]["name"], "minLength")
+      refute Map.has_key?(output_format.schema["properties"]["name"], "maxLength")
+    end
+
+    test "recursively strips constraints from nested schemas" do
+      schema = %{
+        "type" => "object",
+        "properties" => %{
+          "user" => %{
+            "type" => "object",
+            "properties" => %{
+              "age" => %{"type" => "integer", "minimum" => 0, "maximum" => 150},
+              "name" => %{"type" => "string", "minLength" => 1}
+            }
+          },
+          "scores" => %{
+            "type" => "array",
+            "items" => %{"type" => "integer", "minimum" => 0, "maximum" => 100}
+          }
+        }
+      }
+
+      compiled_schema = %{schema: schema}
+
+      {:ok, request} =
+        Anthropic.prepare_request(:object, "anthropic:claude-sonnet-4-5-20250929", "Generate",
+          compiled_schema: compiled_schema
+        )
+
+      provider_opts = request.options[:provider_options]
+      output_format = Keyword.get(provider_opts, :output_format)
+      props = output_format.schema["properties"]
+
+      refute Map.has_key?(props["user"]["properties"]["age"], "minimum")
+      refute Map.has_key?(props["user"]["properties"]["age"], "maximum")
+      refute Map.has_key?(props["user"]["properties"]["name"], "minLength")
+      refute Map.has_key?(props["scores"]["items"], "minimum")
+      refute Map.has_key?(props["scores"]["items"], "maximum")
+    end
+
+    test "strips constraints in tool_strict mode" do
+      {:ok, schema} =
+        ReqLLM.Schema.compile(
+          value: [type: :pos_integer, required: true, doc: "A positive value"]
+        )
+
+      tool =
+        ReqLLM.Tool.new!(
+          name: "other_tool",
+          description: "Another tool",
+          parameter_schema: [x: [type: :string]],
+          callback: fn _ -> {:ok, "done"} end
+        )
+
+      {:ok, request} =
+        Anthropic.prepare_request(:object, "anthropic:claude-sonnet-4-5-20250929", "Generate",
+          compiled_schema: schema,
+          tools: [tool]
+        )
+
+      tools = request.options[:tools]
+      structured_tool = Enum.find(tools, fn t -> t.name == "structured_output" end)
+
+      refute Map.has_key?(structured_tool.parameter_schema["properties"]["value"], "minimum")
+    end
+  end
 end

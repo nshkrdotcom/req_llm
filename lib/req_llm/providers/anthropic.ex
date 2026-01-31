@@ -200,7 +200,11 @@ defmodule ReqLLM.Providers.Anthropic do
 
   defp prepare_json_schema_request(model_spec, prompt, compiled_schema, opts) do
     json_schema = ReqLLM.Schema.to_json(compiled_schema.schema)
-    json_schema = enforce_strict_schema_requirements(json_schema)
+
+    json_schema =
+      json_schema
+      |> strip_constraints_recursive()
+      |> enforce_strict_schema_requirements()
 
     opts_with_format =
       opts
@@ -233,7 +237,11 @@ defmodule ReqLLM.Providers.Anthropic do
   @spec prepare_strict_tool_request(LLMDB.Model.t() | String.t(), any(), any(), keyword()) ::
           {:ok, Req.Request.t()} | {:error, any()}
   defp prepare_strict_tool_request(model_spec, prompt, compiled_schema, opts) do
-    schema = enforce_strict_schema_requirements(compiled_schema.schema)
+    schema =
+      compiled_schema.schema
+      |> ReqLLM.Schema.to_json()
+      |> strip_constraints_recursive()
+      |> enforce_strict_schema_requirements()
 
     case ReqLLM.Tool.new(
            name: "structured_output",
@@ -1240,6 +1248,26 @@ defmodule ReqLLM.Providers.Anthropic do
   end
 
   defp enforce_strict_schema_requirements(schema), do: schema
+
+  defp strip_constraints_recursive(schema) when is_map(schema) do
+    schema
+    |> Map.drop(["minimum", "maximum", "minLength", "maxLength"])
+    |> Map.new(fn
+      {"properties", props} when is_map(props) ->
+        {"properties", Map.new(props, fn {k, v} -> {k, strip_constraints_recursive(v)} end)}
+
+      {"items", items} when is_map(items) ->
+        {"items", strip_constraints_recursive(items)}
+
+      {k, v} when is_map(v) ->
+        {k, strip_constraints_recursive(v)}
+
+      {k, v} ->
+        {k, v}
+    end)
+  end
+
+  defp strip_constraints_recursive(value), do: value
 
   defp maybe_add_output_format(body, opts) do
     provider_opts = get_option(opts, :provider_options, [])
