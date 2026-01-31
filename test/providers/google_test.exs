@@ -1577,4 +1577,75 @@ defmodule ReqLLM.Providers.GoogleTest do
       assert log =~ "Skipping non-Google reasoning detail"
     end
   end
+
+  describe "google_auth_header option for streaming" do
+    setup do
+      {:ok, model} = ReqLLM.model("google:gemini-2.0-flash-exp")
+      context = Context.new([Context.user("test")])
+      {:ok, model: model, context: context}
+    end
+
+    test "default streaming uses query param auth", %{model: model, context: context} do
+      opts = [api_key: "test-api-key"]
+
+      {:ok, finch_request} = Google.attach_stream(model, context, opts, nil)
+
+      assert finch_request.query =~ "key=test-api-key"
+      assert finch_request.query =~ "alt=sse"
+      refute has_header?(finch_request.headers, "x-goog-api-key")
+    end
+
+    test "google_auth_header: true uses header auth instead of query param", %{
+      model: model,
+      context: context
+    } do
+      opts = [
+        api_key: "test-api-key",
+        provider_options: [google_auth_header: true]
+      ]
+
+      {:ok, finch_request} = Google.attach_stream(model, context, opts, nil)
+
+      refute finch_request.query =~ "key="
+      assert finch_request.query == "alt=sse"
+      assert has_header_value?(finch_request.headers, "x-goog-api-key", "test-api-key")
+    end
+
+    test "google_auth_header: false behaves same as default", %{model: model, context: context} do
+      opts = [
+        api_key: "test-api-key",
+        provider_options: [google_auth_header: false]
+      ]
+
+      {:ok, finch_request} = Google.attach_stream(model, context, opts, nil)
+
+      assert finch_request.query =~ "key=test-api-key"
+      refute has_header?(finch_request.headers, "x-goog-api-key")
+    end
+
+    test "google_auth_header works with custom base_url for proxies", %{
+      model: model,
+      context: context
+    } do
+      opts = [
+        api_key: "proxy-api-key",
+        base_url: "https://openai-proxy.example.com/v1",
+        provider_options: [google_auth_header: true]
+      ]
+
+      {:ok, finch_request} = Google.attach_stream(model, context, opts, nil)
+
+      assert finch_request.host == "openai-proxy.example.com"
+      refute finch_request.query =~ "key="
+      assert has_header_value?(finch_request.headers, "x-goog-api-key", "proxy-api-key")
+    end
+
+    defp has_header?(headers, name) do
+      Enum.any?(headers, fn {n, _v} -> n == name end)
+    end
+
+    defp has_header_value?(headers, name, value) do
+      Enum.any?(headers, fn {n, v} -> n == name and v == value end)
+    end
+  end
 end

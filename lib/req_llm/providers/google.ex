@@ -119,6 +119,12 @@ defmodule ReqLLM.Providers.Google do
       type: :string,
       doc:
         "Reference to a previously created cached content. Use the cache name/ID returned from CachedContent creation API."
+    ],
+    google_auth_header: [
+      type: :boolean,
+      default: false,
+      doc:
+        "Use x-goog-api-key header for authentication instead of URL query parameter. Required for OpenAI-compatible API proxies."
     ]
   ]
 
@@ -1615,10 +1621,28 @@ defmodule ReqLLM.Providers.Google do
   defp build_request_headers(_model, _opts), do: [{"Content-Type", "application/json"}]
 
   defp build_request_url(model_name, opts) do
-    api_key = ReqLLM.Keys.get!(opts[:model_struct] || opts[:model], opts)
     base_url = Keyword.fetch!(opts, :base_url)
 
-    "#{base_url}/models/#{model_name}:streamGenerateContent?key=#{api_key}&alt=sse"
+    if use_header_auth?(opts) do
+      "#{base_url}/models/#{model_name}:streamGenerateContent?alt=sse"
+    else
+      api_key = ReqLLM.Keys.get!(opts[:model_struct] || opts[:model], opts)
+      "#{base_url}/models/#{model_name}:streamGenerateContent?key=#{api_key}&alt=sse"
+    end
+  end
+
+  defp use_header_auth?(opts) do
+    provider_options = Keyword.get(opts, :provider_options, [])
+    Keyword.get(provider_options, :google_auth_header, false)
+  end
+
+  defp maybe_add_auth_header(headers, opts) do
+    if use_header_auth?(opts) do
+      api_key = ReqLLM.Keys.get!(opts[:model_struct] || opts[:model], opts)
+      [{"x-goog-api-key", api_key} | headers]
+    else
+      headers
+    end
   end
 
   defp build_request_body(model, context, opts) do
@@ -1689,7 +1713,10 @@ defmodule ReqLLM.Providers.Google do
 
       opts_with_base = Keyword.merge(processed_opts, base_url: base_url, model_struct: model)
 
-      headers = build_request_headers(model, opts_with_base) ++ [{"Accept", "text/event-stream"}]
+      base_headers =
+        build_request_headers(model, opts_with_base) ++ [{"Accept", "text/event-stream"}]
+
+      headers = maybe_add_auth_header(base_headers, opts_with_base)
       url = build_request_url(model.id, opts_with_base)
       body = build_request_body(model, context, processed_opts)
 
